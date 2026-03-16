@@ -19,6 +19,14 @@ typedef struct {
 static int kiss_driver_tx(void * driver_data, const unsigned char * data, size_t data_length) {
 
 	kiss_context_t * ctx = driver_data;
+
+	/* Hex dump of every chunk sent — remove after debugging */
+	csp_print("TX [%zu]:", data_length);
+	for (size_t i = 0; i < data_length; i++) {
+		csp_print(" %02X", data[i]);
+	}
+	csp_print("\n");
+
 	if (csp_usart_write(ctx->fd, data, data_length) == (int)data_length) {
 		return CSP_ERR_NONE;
 	}
@@ -56,8 +64,10 @@ int csp_usart_open_and_add_kiss_interface(const csp_usart_conf_t * conf, const c
 #endif
 
 	int res = csp_kiss_add_interface(&ctx->iface);
+	csp_print("KISS_ADD_IF_RES: %d", res);
 	if (res == CSP_ERR_NONE) {
 		res = csp_usart_open(conf, kiss_driver_rx, ctx, &ctx->fd);
+		csp_print("CSP_USART_OPEN: %d", res);
 	}
 
 	if (return_iface) {

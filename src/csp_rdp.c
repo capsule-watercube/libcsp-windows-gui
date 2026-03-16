@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <endian.h>
+#include <csp/endian.h>
 
 #include <csp/csp.h>
 #include <csp/csp_debug.h>
@@ -48,6 +48,19 @@ typedef struct __packed {
 	uint16_t ack_nr;
 } rdp_header_t;
 
+#ifdef _WIN32
+#include <stdlib.h>
+
+static inline int rand_r(unsigned int *seed) {
+    // Note: This is a simple wrapper. On Windows, 
+    // you might want to use a more robust generator,
+    // but for CSP's ISS (Initial Sequence Number), this is usually fine.
+    srand(*seed);
+    int val = rand();
+    *seed = (unsigned int)val; // Update seed for next call
+    return val;
+}
+#endif
 
 static int csp_rdp_close_internal(csp_conn_t * conn, uint8_t closed_by, bool send_rst);
 

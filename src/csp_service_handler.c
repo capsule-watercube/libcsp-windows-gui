@@ -5,7 +5,7 @@
 
 #include <csp/csp_cmp.h>
 #include <csp/csp_hooks.h>
-#include <endian.h>
+#include <csp/endian.h>
 #include <csp/csp_types.h>
 #include <csp/csp_rtable.h>
 #include <csp/csp_id.h>

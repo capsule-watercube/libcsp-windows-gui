@@ -18,7 +18,8 @@
     #include <zephyr/kernel.h>
     typedef struct k_sem csp_bin_sem_t;
 #endif
-
+#include <semaphore.h>
+typedef sem_t csp_bin_sem_t;
 /**
  * initialize a binary semaphore with static storage
  * The semaphore is created in state \a unlocked (value 1).

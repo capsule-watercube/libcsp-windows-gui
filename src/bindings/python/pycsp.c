@@ -8,11 +8,24 @@
 #include <csp/interfaces/csp_if_kiss.h>
 #include <csp/drivers/usart.h>
 #include <csp/drivers/can_socketcan.h>
-#include <endian.h>
-
+#include <csp/csp_crc32.h>
+#include <csp/endian.h>
+#include <windows.h>
+#include <process.h> // For _beginthreadex
 #define SOCKET_CAPSULE     "csp_socket_t"
 #define CONNECTION_CAPSULE "csp_conn_t"
 #define PACKET_CAPSULE     "csp_packet_t"
+
+#ifdef _WIN32
+    // Include windows.h first if it's needed...
+    #include <windows.h>
+    
+    // Then immediately undefine the "interface" macro 
+    // so it doesn't break CSP struct members.
+    #ifdef interface
+        #undef interface
+    #endif
+#endif                                                       
 
 static PyObject * Error = NULL;
 
@@ -118,6 +131,20 @@ static PyObject * pycsp_get_hostname(PyObject * self, PyObject * args) {
 	return Py_BuildValue("s", csp_get_conf()->hostname);
 }
 
+static PyObject * pycsp_crc32_append(PyObject * self, PyObject * packet_capsule) {
+    // Retrieve the packet pointer from the capsule
+    csp_packet_t * packet = get_obj_as_packet(packet_capsule, false);
+    if (packet == NULL) {
+        return NULL; // TypeError is thrown by get_obj_as_packet
+    }
+
+    // Call the underlying libcsp function
+    int res = csp_crc32_append(packet);
+
+    // Return the result code (CSP_ERR_NONE or error)
+    return Py_BuildValue("i", res);
+}
+
 static PyObject * pycsp_get_model(PyObject * self, PyObject * args) {
 	return Py_BuildValue("s", csp_get_conf()->model);
 }
@@ -201,6 +228,7 @@ static PyObject * pycsp_send(PyObject * self, PyObject * args) {
 	}
 
 	Py_BEGIN_ALLOW_THREADS;
+	csp_print("BEFORE PYTHON CSP SEND\r\n")
 	csp_send(conn, packet);
 	Py_END_ALLOW_THREADS;
 
@@ -461,36 +489,42 @@ static PyObject * pycsp_bind(PyObject * self, PyObject * args) {
 	Py_RETURN_NONE;
 }
 
-static void * csp_task_router(void * param) {
-
-	/* Here there be routing */
-	while (1) {
-		csp_route_work();
-	}
-
-	return NULL;
+static unsigned __stdcall csp_task_router(void * param) {
+    PyGILState_STATE gstate = PyGILState_Ensure();
+    Py_BEGIN_ALLOW_THREADS  // release GIL for the entire loop
+    while (1) {
+        csp_route_work();
+    }
+    Py_END_ALLOW_THREADS
+    PyGILState_Release(gstate);
+    return 0;
 }
 
 static int csp_route_start_task(void) {
 
-	pthread_attr_t attributes;
-	pthread_t handle;
-	int ret;
+	HANDLE handle;
+    
+    // _beginthreadex is safer than CreateThread for C/C++ runtime libraries
+    handle = (HANDLE)_beginthreadex(
+        NULL,                   // Security attributes
+        0,                      // Default stack size
+        (unsigned (__stdcall *)(void *))csp_task_router, // Thread function
+        NULL,                   // Argument to thread
+        0,                      // Init flag (0 = running)
+        NULL                    // Thread ID pointer
+    );
 
-	if (pthread_attr_init(&attributes) != 0) {
-		return CSP_ERR_NOMEM;
-	}
-	pthread_attr_setdetachstate(&attributes, PTHREAD_CREATE_DETACHED);  // no need to join with thread to free its resources
+    if (handle == NULL) {
+        // Equivalent to CSP_ERR_NOMEM or error check
+        printf("Failed to start router task\n");
+        return -1; 
+    }
 
-	ret = pthread_create(&handle, &attributes, csp_task_router, NULL);
-	pthread_attr_destroy(&attributes);
+    // "Detaching" in Windows: Close the handle immediately.
+    // The thread continues to run, but we release our reference to it.
+    CloseHandle(handle);
 
-	if (ret != 0) {
-		printf("Failed to start router task, error: %d", ret);
-		return ret;
-	}
-
-	return CSP_ERR_NONE;
+    return 0; // CSP_ERR_NONE
 }
 
 static PyObject * pycsp_route_start_task(PyObject * self, PyObject * args) {
@@ -1001,7 +1035,7 @@ static PyMethodDef methods[] = {
 	{"rtable_load", pycsp_rtable_load, METH_VARARGS, ""},
 	{"print_routes", pycsp_print_routes, METH_NOARGS, ""},
 #endif
-
+	{"crc32_append", (PyCFunction)pycsp_crc32_append, METH_O, "Append CRC32 checksum to packet"},
 	/* csp/csp_buffer.h */
 	{"buffer_free", pycsp_buffer_free, METH_VARARGS, ""},
 	{"buffer_get", pycsp_buffer_get, METH_VARARGS, ""},

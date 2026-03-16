@@ -6,7 +6,7 @@
 #include <csp/csp.h>
 #include <csp/csp_debug.h>
 #include <csp/csp_hooks.h>
-#include <endian.h>
+#include <csp/endian.h>
 #include <csp/csp_crc32.h>
 #include <csp/csp_rtable.h>
 #include <csp/interfaces/csp_if_lo.h>
@@ -132,10 +132,11 @@ void csp_send_direct(csp_id_t* idout, csp_packet_t * packet, csp_iface_t * route
 
 	/* Quickly send on loopback */
 	if (idout->dst == csp_if_lo.addr) {
+		csp_print("loopback send\r\n");
 		csp_send_direct_iface(idout, packet, &csp_if_lo, via, from_me);
 		return;
 	}
-
+	
 	csp_id_t idout_copy = *idout; /* Broadcast function procedure modifies destination */
 	csp_iface_t * iface = NULL; /* Interface iterator */
 	csp_iface_t * next_iface = NULL; /* Reference to keep track of packet copying */
@@ -163,6 +164,7 @@ void csp_send_direct(csp_id_t* idout, csp_packet_t * packet, csp_iface_t * route
 	if (local_found) {
 		if (next_iface != NULL) {
 			convert_broadcast(idout, &idout_copy, next_iface);
+			csp_print("loocal found\r\n");
 			send_packet(&idout_copy, packet, next_iface, via, from_me);
 		} else {
 			csp_buffer_free(packet);
@@ -186,6 +188,7 @@ void csp_send_direct(csp_id_t* idout, csp_packet_t * packet, csp_iface_t * route
 
 			if (next_iface != NULL) {
 				csp_packet_t * copy = csp_buffer_clone(packet);
+				csp_print("rtable print found\r\n");
 				send_packet(&idout_copy, copy, next_iface, via, from_me);
 			}
 			next_iface = route->iface;
@@ -196,6 +199,7 @@ void csp_send_direct(csp_id_t* idout, csp_packet_t * packet, csp_iface_t * route
 	/* If the above worked, we don't want to look at default interfaces */
 	if (route_found == 1) {
 		if (next_iface != NULL) {
+			csp_print("  route found\r\n");
 			send_packet(&idout_copy, packet, next_iface, via, from_me);
 		} else {
 			csp_buffer_free(packet);
@@ -214,12 +218,14 @@ void csp_send_direct(csp_id_t* idout, csp_packet_t * packet, csp_iface_t * route
 
 		if (next_iface != NULL) {
 			csp_packet_t * copy = csp_buffer_clone(packet);
+			csp_print("  def if send\r\n");
 			send_packet(&idout_copy, copy, next_iface, via, from_me);
 		}
 		next_iface = iface;
 	}
 
 	if (next_iface != NULL) {
+		csp_print("  next iface send\r\n");
 		send_packet(&idout_copy, packet, next_iface, via, from_me);
 		return;
 	}
@@ -300,7 +306,7 @@ void csp_send(csp_conn_t * conn, csp_packet_t * packet) {
 	if (packet == NULL) {
 		return;
 	}
-
+	
 	if ((conn == NULL) || (conn->state != CONN_OPEN)) {
 		csp_buffer_free(packet);
 		return;
@@ -314,7 +320,7 @@ void csp_send(csp_conn_t * conn, csp_packet_t * packet) {
 		}
 	}
 #endif
-
+	csp_print("before send direct");
 	csp_send_direct(&conn->idout, packet, NULL);
 
 }

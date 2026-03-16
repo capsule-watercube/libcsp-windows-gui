@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "csp/autoconfig.h"
-
+#include "../contrib/windows/windows_queue_csp_typedefs.h"
 #if (CSP_FREERTOS)
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -29,9 +29,10 @@ typedef StaticQueue_t csp_static_queue_t;
 typedef struct k_msgq * csp_queue_handle_t;
 typedef struct k_msgq csp_static_queue_t;
 #else
-typedef struct pthread_queue_s pthread_queue_t; // Opaque pointer
-typedef pthread_queue_t * csp_queue_handle_t;
+// typedef struct pthread_queue_s pthread_queue_t; // Opaque pointer
+// typedef pthread_queue_t * csp_queue_handle_t;
 typedef void * csp_static_queue_t;
+typedef windows_queue_t* csp_queue_handle_t;
 #endif
 
 /**

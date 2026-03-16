@@ -12,8 +12,8 @@ csp_queue_handle_t csp_queue_create_static(int length, size_t item_size, char * 
 	return windows_queue_create(length, item_size);
 }
 
-void csp_queue_remove(csp_queue_handle_t queue) {
-	windows_queue_delete(queue);
+int csp_queue_free(csp_queue_handle_t handle) {
+	windows_queue_delete(handle);
 }
 
 int csp_queue_enqueue(csp_queue_handle_t handle, const void * value, uint32_t timeout) {
@@ -43,4 +43,8 @@ int csp_queue_size(csp_queue_handle_t handle) {
 
 int csp_queue_size_isr(csp_queue_handle_t handle) {
 	return windows_queue_items(handle);
+}
+
+void csp_queue_empty(csp_queue_handle_t queue) {
+	windows_queue_empty((windows_queue_t *)queue);
 }

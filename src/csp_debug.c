@@ -18,12 +18,36 @@ uint8_t csp_dbg_packet_print;
 #include <stdarg.h>
 #include <stdio.h>
 #include "csp/csp_debug.h"
-__weak void csp_print_func(const char * fmt, ...) {
+#include <time.h>
+void csp_print_func(const char * fmt, ...) {
+    // 1. Get current timestamp
+    time_t now;
+    time(&now);
+    struct tm *local = localtime(&now);
+    char time_str[10];
+    strftime(time_str, sizeof(time_str), "%H:%M:%S", local);
+
+    // 2. Prepare the variable argument list
     va_list args;
     va_start(args, fmt);
+
+    // 3. Thread-safe printing with prefix and timestamp
+    // We use flockfile/funlockfile logic conceptually, 
+    // but on Windows standard printf is usually thread-safe enough.
+    printf("[%s] [CSP] ", time_str);
     vprintf(fmt, args);
+    
+    // 4. Ensure immediate output (don't wait for buffer to fill)
+    fflush(stdout);
+
     va_end(args);
 }
+// __weak void csp_print_func(const char * fmt, ...) {
+//     va_list args;
+//     va_start(args, fmt);
+//     vprintf(fmt, args);
+//     va_end(args);
+// }
 #else
 __weak void csp_print_func(const char * fmt, ...) {}
 #endif

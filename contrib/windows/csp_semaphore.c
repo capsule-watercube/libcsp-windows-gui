@@ -1,51 +1,61 @@
+#include "../../src/csp_semaphore.h"
 
+#include <inttypes.h>
+#include <csp/csp.h>
+#include <csp/csp_debug.h>
 
-#include "../../csp_semaphore.h"
+#include <semaphore.h>
+#include <time.h>
 
-#include <windows.h>
+void csp_bin_sem_init(csp_bin_sem_t * sem) {
 
-int csp_bin_sem_create(csp_bin_sem_handle_t * sem) {
+	sem_init((sem_t *) sem, 0, 1);
+}
 
-	HANDLE semHandle = CreateSemaphore(NULL, 1, 1, NULL);
-	if (semHandle == NULL) {
-		return CSP_SEMAPHORE_ERROR;
+int csp_bin_sem_wait(csp_bin_sem_t * sem, unsigned int timeout) {
+
+	int ret;
+
+	if (timeout == CSP_MAX_TIMEOUT) {
+		ret = sem_wait((sem_t *) sem);
+	} else {
+		struct timespec ts;
+		if (clock_gettime(CLOCK_REALTIME, &ts)) {
+			return CSP_SEMAPHORE_ERROR;
+		}
+
+		uint32_t sec = timeout / 1000;
+		uint32_t nsec = (timeout - 1000 * sec) * 1000000;
+
+		ts.tv_sec += sec;
+
+		if (ts.tv_nsec + nsec >= 1000000000) {
+			ts.tv_sec++;
+		}
+
+		ts.tv_nsec = (ts.tv_nsec + nsec) % 1000000000;
+
+        const struct timespec ts_const = ts;
+		ret = sem_timedwait((sem_t *) sem, &ts_const);
 	}
-	*sem = semHandle;
+    if (ret != 0)
+    return CSP_SEMAPHORE_ERROR;
+
 	return CSP_SEMAPHORE_OK;
 }
 
-void csp_bin_sem_create_static(csp_bin_sem_handle_t * handle, csp_bin_sem_t * buffer) {
-	csp_bin_sem_create(handle);
-}
 
-int csp_bin_sem_remove(csp_bin_sem_handle_t * sem) {
+int csp_bin_sem_post(csp_bin_sem_t * sem) {
 
-	if (!CloseHandle(*sem)) {
-		return CSP_SEMAPHORE_ERROR;
-	}
-	return CSP_SEMAPHORE_OK;
-}
-
-int csp_bin_sem_wait(csp_bin_sem_handle_t * sem, uint32_t timeout) {
-
-	if (WaitForSingleObject(*sem, timeout) == WAIT_OBJECT_0) {
+	int value;
+	sem_getvalue((sem_t *) sem, &value);
+	if (value > 0) {
 		return CSP_SEMAPHORE_OK;
 	}
+
+	if (sem_post((sem_t *) sem) == 0) {
+		return CSP_SEMAPHORE_OK;
+	}
+
 	return CSP_SEMAPHORE_ERROR;
-}
-
-int csp_bin_sem_post(csp_bin_sem_handle_t * sem) {
-
-	if (!ReleaseSemaphore(*sem, 1, NULL)) {
-		return CSP_SEMAPHORE_ERROR;
-	}
-	return CSP_SEMAPHORE_OK;
-}
-
-int csp_bin_sem_post_isr(csp_bin_sem_handle_t * sem, int * task_woken) {
-
-	if (task_woken != NULL) {
-		*task_woken = 0;
-	}
-	return csp_bin_sem_post(sem);
 }

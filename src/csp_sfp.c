@@ -7,7 +7,7 @@
 #include <csp/crypto/csp_hmac.h>
 #include <csp/csp_debug.h>
 #include "csp_macro.h"
-#include <endian.h>
+#include <csp/endian.h>
 
 #include "csp_conn.h"
 

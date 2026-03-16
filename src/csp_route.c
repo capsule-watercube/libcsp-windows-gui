@@ -3,7 +3,7 @@
 #include <stdlib.h>
 
 #include <csp/csp_crc32.h>
-#include <endian.h>
+#include <csp/endian.h>
 #include <csp/arch/csp_time.h>
 #include <csp/arch/csp_queue.h>
 #include <csp/crypto/csp_hmac.h>

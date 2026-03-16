@@ -24,6 +24,16 @@ extern "C" {
 #define CSP_MAX_DELAY CSP_MAX_TIMEOUT
 #define CSP_INFINITY CSP_MAX_TIMEOUT
 
+#ifdef _WIN32
+    // Include windows.h first if it's needed...
+    #include <windows.h>
+    
+    // Then immediately undefine the "interface" macro 
+    // so it doesn't break CSP struct members.
+    #ifdef interface
+        #undef interface
+    #endif
+#endif    
 
 /**
  * CSP Debug Types

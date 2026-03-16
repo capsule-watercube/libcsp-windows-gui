@@ -22,27 +22,64 @@ option(CSP_HAVE_STDIO "OS provides C Standard I/O functions" ON)
 option(CSP_ENABLE_CSP_PRINT "Enable csp_print() function" ON)
 option(CSP_PRINT_STDIO "Use vprintf() for csp_print() function" ON)
 
-set(CSP_QFIFO_LEN 15 CACHE STRING "Length of incoming queue for router task")
+set(CSP_QFIFO_LEN 24 CACHE STRING "Length of incoming queue for router task")
 set(CSP_PORT_MAX_BIND 16 CACHE STRING "Maximum number of bindable ports")
 set(CSP_CONN_RXQUEUE_LEN 16 CACHE STRING "Number of packets in connection queue")
 set(CSP_CONN_MAX 8 CACHE STRING "Number of new connections on socket queue")
 set(CSP_BUFFER_SIZE 256 CACHE STRING "Bytes in each packet buffer")
 set(CSP_BUFFER_COUNT 15 CACHE STRING "Number of total packet buffers")
 set(CSP_RDP_MAX_WINDOW 5 CACHE STRING "Max window size for RDP")
-set(CSP_RTABLE_SIZE 10 CACHE STRING "Number of elements in routing table")
+set(CSP_RTABLE_SIZE 12 CACHE STRING "Number of elements in routing table")
 
 option(CSP_USE_RDP "Reliable Datagram Protocol" ON)
-option(CSP_USE_HMAC "Hash-based message authentication code" ON)
-option(CSP_USE_PROMISC "Promiscious mode" ON)
-option(CSP_USE_RTABLE "Use routing table" OFF)
+option(CSP_USE_HMAC "Hash-based message authentication code" OFF)
+option(CSP_USE_PROMISC "Promiscious mode" OFF)
+option(CSP_USE_RTABLE "Use routing table" ON)
 option(CSP_BUFFER_ZERO_CLEAR "Zero out the packet buffer upon allocation" ON)
 
-option(CSP_ENABLE_PYTHON3_BINDINGS "Build Python3 binding" OFF)
+option(CSP_ENABLE_PYTHON3_BINDINGS "Build Python3 binding" ON)
 option(CSP_BUILD_SAMPLES "Build samples and examples by default" OFF)
 
-option(CSP_FIXUP_V1_ZMQ_LITTLE_ENDIAN "Use little-endian CSP ID for ZMQ with CSPv1" ON)
+option(CSP_FIXUP_V1_ZMQ_LITTLE_ENDIAN "Use little-endian CSP ID for ZMQ with CSPv1" OFF)
 
 option(CSP_ENABLE_KISS_CRC "Enables the extra CRC in the KISS interface (legacy)" ON)
+
+if(WIN32)
+  set(CSP_WINDOWS 1)
+  
+#   # Point directly to the MSYS2 Python 3.10 we just installed
+#   target_include_directories(csp PRIVATE 
+#     "C:/Users/Nurzhan/AppData/Local/Programs/Python/Python311/include"
+# )
+
+# target_link_libraries(csp PRIVATE 
+#     "C:/Users/Nurzhan/AppData/Local/Programs/Python/Python311/libs/python311.lib"
+# )
+
+  target_sources(csp PRIVATE 
+    contrib/windows/windows_queue.c
+    contrib/windows/csp_queue.c
+    contrib/windows/csp_semaphore.c
+    contrib/windows/csp_system.c
+    contrib/windows/csp_clock.c
+    contrib/windows/usart_windows.c # Now needs Python.h!
+    contrib/windows/csp_time.c
+  )
+
+  # Add MSYS2 Python headers to the main library
+  target_include_directories(csp PRIVATE contrib/windows ${MSYS_PYTHON_INC})
+  
+  # Link against WinSock AND the Python library
+  target_link_libraries(csp PUBLIC ws2_32 ${MSYS_PYTHON_LIB})
+
+  target_link_options(csp PRIVATE 
+    "-static-libgcc" 
+    "-static-libstdc++" 
+    "-Wl,-Bstatic" 
+    "-lwinpthread" 
+    "-Wl,-Bdynamic"
+  )
+endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   set(CSP_POSIX 1)
@@ -141,6 +178,29 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "CYGWIN")
   add_subdirectory(samples)
 endif()
 
+# --- 2. Update the Python Bindings block (at the bottom) ---
+# if(${CSP_ENABLE_PYTHON3_BINDINGS})
+#   # On Windows MinGW, we bypass find_package to ensure we use the MSYS2 version
+#   if(WIN32)
+#     add_library(libcsp_py3 MODULE src/bindings/python/pycsp.c)
+#     set_target_properties(libcsp_py3 PROPERTIES PREFIX "" SUFFIX ".pyd")
+#     target_include_directories(libcsp_py3 PUBLIC 
+#         ${csp_inc} 
+#         "C:/Users/Nurzhan/AppData/Local/Programs/Python/Python311/include"
+#     )
+#     target_link_libraries(libcsp_py3 PUBLIC 
+#         csp 
+#         "C:/Users/Nurzhan/AppData/Local/Programs/Python/Python311/libs/python311.lib"
+#     )
+#   else()
+#     find_package(Python3 COMPONENTS Development.Module)
+#     if(Python3_Development.Module_FOUND)
+#       Python3_add_library(libcsp_py3 MODULE WITH_SOABI src/bindings/python/pycsp.c)
+#       target_include_directories(libcsp_py3 PUBLIC ${csp_inc})
+#       target_link_libraries(libcsp_py3 PUBLIC csp)
+#     endif()
+#   endif()
+# endif()
 if(${CSP_ENABLE_PYTHON3_BINDINGS})
   find_package(Python3 COMPONENTS Development.Module)
   if(Python3_Development.Module_FOUND)

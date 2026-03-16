@@ -4,17 +4,6 @@
 #include <windows.h>
 #include <synchapi.h>
 
-struct windows_queue_s {
-	void * buffer;
-	int size;
-	int item_size;
-	int items;
-	int head_idx;
-	CRITICAL_SECTION mutex;
-	CONDITION_VARIABLE cond_full;
-	CONDITION_VARIABLE cond_empty;
-};
-
 static int queueFull(windows_queue_t * queue) {
 	return queue->items == queue->size;
 }
@@ -106,4 +95,20 @@ int windows_queue_items(windows_queue_t * queue) {
 	LeaveCriticalSection(&(queue->mutex));
 
 	return items;
+}
+
+void windows_queue_empty(windows_queue_t * queue) {
+    if (queue == NULL) return;
+
+    EnterCriticalSection(&(queue->mutex));
+    
+    // Reset the logic pointers
+    queue->items = 0;
+    queue->head_idx = 0;
+    
+    LeaveCriticalSection(&(queue->mutex));
+
+    // Since the queue is now empty, it is definitely no longer full.
+    // Wake up any threads waiting in windows_queue_enqueue.
+    WakeAllConditionVariable(&(queue->cond_full));
 }

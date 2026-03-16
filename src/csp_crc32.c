@@ -2,7 +2,7 @@
 
 #include <csp/csp_crc32.h>
 
-#include <endian.h>
+#include <csp/endian.h>
 #include <string.h>
 
 #include <csp/csp_id.h>

@@ -228,7 +228,6 @@ static PyObject * pycsp_send(PyObject * self, PyObject * args) {
 	}
 
 	Py_BEGIN_ALLOW_THREADS;
-	csp_print("BEFORE PYTHON CSP SEND\r\n")
 	csp_send(conn, packet);
 	Py_END_ALLOW_THREADS;
 

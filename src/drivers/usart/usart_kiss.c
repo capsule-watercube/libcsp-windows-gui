@@ -20,13 +20,6 @@ static int kiss_driver_tx(void * driver_data, const unsigned char * data, size_t
 
 	kiss_context_t * ctx = driver_data;
 
-	/* Hex dump of every chunk sent — remove after debugging */
-	csp_print("TX [%zu]:", data_length);
-	for (size_t i = 0; i < data_length; i++) {
-		csp_print(" %02X", data[i]);
-	}
-	csp_print("\n");
-
 	if (csp_usart_write(ctx->fd, data, data_length) == (int)data_length) {
 		return CSP_ERR_NONE;
 	}

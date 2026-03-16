@@ -32,7 +32,6 @@ int csp_kiss_tx(csp_iface_t * iface, uint16_t via, csp_packet_t * packet, int fr
 
 	/* Lock (before modifying packet) */
 	csp_usart_lock(driver);
-	csp_print("lock acquired \r\n");
 #if CSP_ENABLE_KISS_CRC
 	/* Add CRC32 checksum */
 	csp_crc32_append(packet);
@@ -65,7 +64,6 @@ int csp_kiss_tx(csp_iface_t * iface, uint16_t via, csp_packet_t * packet, int fr
 
 	/* Unlock */
 	csp_usart_unlock(driver);
-	csp_print("lock unlocked \r\n");
 	/* Free data */
 	csp_buffer_free(packet);
 

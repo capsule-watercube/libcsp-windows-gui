@@ -23,6 +23,9 @@ extern "C" {
  */
 #if (CSP_ZEPHYR)
 typedef const struct device * csp_usart_fd_t;
+#elif defined(_WIN32)
+#include <windows.h>
+typedef HANDLE csp_usart_fd_t;
 #else
 typedef int csp_usart_fd_t;
 #endif

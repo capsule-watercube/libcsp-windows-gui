@@ -177,3 +177,29 @@ int csp_usart_open(const csp_usart_conf_t * conf, csp_usart_callback_t rx_callba
 
 	return CSP_ERR_NONE;
 }
+
+void csp_usart_close(void) {
+    if (g_ctx == NULL) {
+        return;
+    }
+
+    /* Signal RX thread to stop */
+    InterlockedExchange(&g_ctx->isListening, 0);
+
+    /* Wait for RX thread to finish */
+    if (g_ctx->rx_thread != NULL) {
+        WaitForSingleObject(g_ctx->rx_thread, 2000);
+        CloseHandle(g_ctx->rx_thread);
+        g_ctx->rx_thread = NULL;
+    }
+
+    /* Close the COM port */
+    if (g_ctx->fd != INVALID_HANDLE_VALUE) {
+        PurgeComm(g_ctx->fd, PURGE_RXCLEAR | PURGE_TXCLEAR);
+        CloseHandle(g_ctx->fd);
+        g_ctx->fd = INVALID_HANDLE_VALUE;
+    }
+
+    free(g_ctx);
+    g_ctx = NULL;
+}

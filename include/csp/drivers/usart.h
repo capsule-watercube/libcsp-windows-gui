@@ -66,6 +66,8 @@ typedef void (*csp_usart_callback_t)(void * user_data, uint8_t * buf, size_t len
  */
 int csp_usart_open(const csp_usart_conf_t * conf, csp_usart_callback_t rx_callback, void * user_data, csp_usart_fd_t * fd);
 
+void csp_usart_close(void);
+
 /**
  * Write data on open UART.
  *
